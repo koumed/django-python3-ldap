@@ -9,7 +9,7 @@ from contextlib import contextmanager
 from django.contrib.auth import get_user_model
 from django_python3_ldap.conf import settings
 from django_python3_ldap.utils import import_func, format_search_filter
-
+import ssl
 
 logger = logging.getLogger(__name__)
 
@@ -145,18 +145,19 @@ def connection(**kwargs):
         auto_bind = ldap3.AUTO_BIND_NO_TLS
     # Connect.
     try:
+        tls = ldap3.Tls(validate=ssl.CERT_NONE, version=ssl.PROTOCOL_TLSv1_2)
         c = ldap3.Connection(
             ldap3.Server(
                 settings.LDAP_AUTH_URL,
                 allowed_referral_hosts=[("*", True)],
                 get_info=ldap3.NONE,
-                connect_timeout=settings.LDAP_AUTH_CONNECT_TIMEOUT,
+                connect_timeout=settings.LDAP_AUTH_CONNECT_TIMEOUT, use_ssl=True, tls=tls,
             ),
             user=username,
             password=password,
             auto_bind=auto_bind,
             raise_exceptions=True,
-            receive_timeout=settings.LDAP_AUTH_RECEIVE_TIMEOUT,
+            receive_timeout=settings.LDAP_AUTH_RECEIVE_TIMEOUT, authentication=ldap3.SASL, sasl_mechanism=ldap3.KERBEROS, 
         )
     except LDAPException as ex:
         logger.warning("LDAP connect failed: {ex}".format(ex=ex))
